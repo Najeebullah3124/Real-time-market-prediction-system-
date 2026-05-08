@@ -12,3 +12,19 @@ stages:
       hash: md5
       md5: 728e3a197fb57a754dfe90e14f03079c
       size: 616492
+  train:
+    cmd: python train.py
+    deps:
+    - path: dataset/final_dataset.csv
+      hash: md5
+      md5: 728e3a197fb57a754dfe90e14f03079c
+      size: 616492
+    - path: train.py
+      hash: md5
+      md5: faa03952987fd0d80b4c32061bb4f85b
+      size: 5106
+    outs:
+    - path: scaler.pkl
+      hash: md5
+      md5: 72f9d1e471594110f0ee41eb5b2d0b65
+      size: 682
