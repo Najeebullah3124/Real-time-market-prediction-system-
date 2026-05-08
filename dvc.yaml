@@ -1,0 +1,14 @@
+stages:
+  prepare:
+    cmd: python build_dataset.py
+    deps:
+    - build_dataset.py
+    outs:
+    - dataset/final_dataset.csv
+  train:
+    cmd: python train.py
+    deps:
+    - dataset/final_dataset.csv
+    - train.py
+    outs:
+    - scaler.pkl
