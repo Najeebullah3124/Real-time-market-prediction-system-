@@ -1,0 +1,14 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python build_dataset.py
+    deps:
+    - path: build_dataset.py
+      hash: md5
+      md5: 234591408f8ead3f24bfc07403357202
+      size: 3472
+    outs:
+    - path: dataset/final_dataset.csv
+      hash: md5
+      md5: 728e3a197fb57a754dfe90e14f03079c
+      size: 616492
