@@ -1,6 +1,10 @@
+import os
+
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
+
+PROJECT_DIR = os.environ.get("AIRFLOW_PROJECT_DIR", "/opt/airflow/project")
 
 default_args = {
     'owner': 'market_admin',
@@ -20,29 +24,19 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    # 1. Pull data from DVC (if remote is configured)
     pull_data = BashOperator(
         task_id='dvc_pull',
-        bash_command='dvc pull',
+        bash_command=f'cd "{PROJECT_DIR}" && dvc pull',
     )
 
-    # 2. Run DVC pipeline (repro)
-    # This will run build_dataset.py and train.py if dependencies changed
     run_pipeline = BashOperator(
         task_id='dvc_repro',
-        bash_command='dvc repro',
+        bash_command=f'cd "{PROJECT_DIR}" && dvc repro',
     )
 
-    # 3. Check MLflow metrics (optional check)
     check_metrics = BashOperator(
         task_id='check_mlflow',
-        bash_command='python check_mlflow.py',
+        bash_command=f'cd "{PROJECT_DIR}" && python check_mlflow.py',
     )
-
-    # 4. Push changes to GitHub (optional, use with caution in automation)
-    # git_push = BashOperator(
-    #     task_id='git_push',
-    #     bash_command='git add . && git commit -m "Auto-update from pipeline" && git push origin main',
-    # )
 
     pull_data >> run_pipeline >> check_metrics

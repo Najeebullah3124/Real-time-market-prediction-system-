@@ -7,10 +7,17 @@ env/
 venv/
 .env
 
+# Keys — never commit (use GitHub secret EC2_SSH_KEY)
+*.pem
+
 # MLflow
 mlruns/
 mlruns.db
 mlflow.db
+
+# Airflow logs volume (keep .gitkeep so compose bind mount path exists)
+logs/airflow/*
+!logs/airflow/.gitkeep
 
 # OS
 .DS_Store

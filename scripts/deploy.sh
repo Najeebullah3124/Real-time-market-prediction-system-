@@ -11,6 +11,9 @@ git fetch origin
 git checkout "$BRANCH"
 git pull origin "$BRANCH"
 
+# Enable Airflow stack (Postgres + scheduler + webserver). Set to empty to skip.
+export COMPOSE_PROFILES="${COMPOSE_PROFILES:-airflow}"
+
 docker compose up -d --build --remove-orphans
 
 docker image prune -f

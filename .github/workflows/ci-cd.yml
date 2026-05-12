@@ -1,3 +1,15 @@
+# CI: validate Compose + build Docker images (Airflow layer only on main / manual).
+# CD: SSH to EC2 and run scripts/deploy.sh.
+#
+# Required repository secrets:
+#   EC2_HOST        — e.g. 54.234.214.235
+#   EC2_USER        — e.g. ubuntu
+#   EC2_SSH_KEY     — full private key text (same as Mlops.pem; never commit .pem)
+# Optional:
+#   EC2_DEPLOY_PATH — clone path on server (default /opt/market-prediction)
+#
+# EC2: open inbound TCP 22 from GitHub Actions IPs, or use a self-hosted runner on the instance.
+
 name: CI/CD
 
 on:
@@ -11,18 +23,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Build & verify Docker image
+  validate-compose:
+    name: Validate docker compose
     runs-on: ubuntu-latest
-    timeout-minutes: 90
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Docker Compose config
+        run: docker compose --profile airflow config --quiet
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  build-images:
+    name: Build Docker images
+    needs: validate-compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Build image (validation only)
+      - name: Build API image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -31,9 +49,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build Airflow image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.airflow
+          push: false
+          tags: market-prediction-airflow:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     name: Deploy to EC2
-    needs: ci
+    needs: build-images
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -45,6 +74,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           script_stop: true
           script: |
             set -euo pipefail
@@ -52,5 +82,17 @@ jobs:
             if [ -z "$DEPLOY_PATH" ]; then
               DEPLOY_PATH="/opt/market-prediction"
             fi
+            mkdir -p "$DEPLOY_PATH"
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              echo "Clone repo first on the server, for example:"
+              echo "  sudo mkdir -p /opt/market-prediction && sudo chown \$USER:\$USER /opt/market-prediction"
+              echo "  git clone https://github.com/abdul-rehman-s/Real-time-market-prediction-system-.git \$DEPLOY_PATH"
+              exit 1
+            fi
             cd "$DEPLOY_PATH"
             bash scripts/deploy.sh
+
+      - name: Smoke test API (optional)
+        continue-on-error: true
+        run: |
+          curl -fsS --connect-timeout 15 "http://${{ secrets.EC2_HOST }}:8000/health" | head -c 500 || echo "Health check skipped (security group may block GitHub runner IPs)"
