@@ -14,6 +14,6 @@ git pull origin "$BRANCH"
 # Enable Airflow stack (Postgres + scheduler + webserver). Set to empty to skip.
 export COMPOSE_PROFILES="${COMPOSE_PROFILES:-airflow}"
 
-docker compose up -d --build --remove-orphans
+sudo COMPOSE_PROFILES="$COMPOSE_PROFILES" docker compose up -d --build --remove-orphans
 
-docker image prune -f
+sudo docker image prune -f

@@ -20,14 +20,15 @@ git pull origin "$BRANCH"
 
 export COMPOSE_PROFILES="${COMPOSE_PROFILES:-airflow}"
 
-echo "==> Build images sequentially (avoids parallel builds filling small disks)"
-sudo -E docker compose build --parallel 1
+echo "==> Build API image first, then Airflow image (sequential; avoids filling small disks)"
+sudo COMPOSE_PROFILES="$COMPOSE_PROFILES" docker compose build api
+sudo COMPOSE_PROFILES="$COMPOSE_PROFILES" docker compose build airflow-init
 
 echo "==> Start services"
-sudo -E docker compose up -d --remove-orphans
+sudo COMPOSE_PROFILES="$COMPOSE_PROFILES" docker compose up -d --remove-orphans
 
 echo "==> Status"
-sudo docker compose ps
+sudo COMPOSE_PROFILES="$COMPOSE_PROFILES" docker compose ps
 
 echo "==> Disk after"
 df -h /
