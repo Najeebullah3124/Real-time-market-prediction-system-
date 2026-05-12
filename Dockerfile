@@ -1,31 +1,30 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# FastAPI + TensorFlow inference API
+FROM python:3.10-slim-bookworm
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    MLFLOW_TRACKING_URI=sqlite:////app/mlflow.db
+
+# TensorFlow / numeric stack helpers on slim images
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
-    git \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container at /app
 COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code into the container at /app
 COPY . .
 
-# Expose the port the app runs on
 EXPOSE 8000
 
-# Define environment variables
-ENV MLFLOW_TRACKING_URI=sqlite:///mlflow.db
-ENV PYTHONUNBUFFERED=1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8000/health || exit 1
 
-# Command to run the application
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
