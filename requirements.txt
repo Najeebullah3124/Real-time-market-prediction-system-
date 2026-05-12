@@ -1,0 +1,15 @@
+yfinance
+requests
+pandas
+numpy
+transformers
+tensorflow
+scikit-learn
+mlflow
+fastapi
+uvicorn
+pytest
+vaderSentiment
+matplotlib
+seaborn
+python-dotenv
