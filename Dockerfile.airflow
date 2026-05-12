@@ -3,10 +3,9 @@
 FROM apache/airflow:2.10.3-python3.10
 
 USER root
+# Keep image small for small EBS volumes; TensorFlow uses prebuilt wheels (no gcc needed).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
-    build-essential \
-    curl \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
