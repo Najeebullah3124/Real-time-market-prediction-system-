@@ -1,14 +1,14 @@
-# CI: validate Compose + build Docker images (Airflow layer only on main / manual).
-# CD: SSH to EC2 and run scripts/deploy.sh.
+# CI: Python smoke tests, validate Compose, build Docker images.
+# CD: SSH to EC2 and run scripts/deploy.sh (pull + docker compose).
 #
-# Required repository secrets:
-#   EC2_HOST        — e.g. 54.234.214.235
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   EC2_HOST        — e.g. 16.16.206.204
 #   EC2_USER        — e.g. ubuntu
-#   EC2_SSH_KEY     — full private key text (same as Mlops.pem; never commit .pem)
+#   EC2_SSH_KEY     — full private key PEM text (never commit *.pem; use a deploy key or instance key in secrets only)
 # Optional:
-#   EC2_DEPLOY_PATH — clone path on server (default /opt/market-prediction)
+#   EC2_DEPLOY_PATH — app directory on server (default /opt/market-prediction)
 #
-# EC2: open inbound TCP 22 from GitHub Actions IPs, or use a self-hosted runner on the instance.
+# EC2 security group: allow SSH (22) from GitHub Actions IPs or use a self-hosted runner on the instance.
 
 name: CI/CD
 
@@ -18,11 +18,33 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  test-python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Pytest (smoke)
+        run: pytest -v
+      - name: Byte-compile
+        run: python -m compileall -q -x '(/\.venv/|/venv/)' .
+
   validate-compose:
     name: Validate docker compose
     runs-on: ubuntu-latest
@@ -33,7 +55,7 @@ jobs:
 
   build-images:
     name: Build Docker images
-    needs: validate-compose
+    needs: [test-python, validate-compose]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -84,9 +106,9 @@ jobs:
             fi
             mkdir -p "$DEPLOY_PATH"
             if [ ! -d "$DEPLOY_PATH/.git" ]; then
-              echo "Clone repo first on the server, for example:"
+              echo "Clone the repo on the server first, for example:"
               echo "  sudo mkdir -p /opt/market-prediction && sudo chown \$USER:\$USER /opt/market-prediction"
-              echo "  git clone https://github.com/abdul-rehman-s/Real-time-market-prediction-system-.git \$DEPLOY_PATH"
+              echo "  git clone https://github.com/${{ github.repository }}.git \"\$DEPLOY_PATH\""
               exit 1
             fi
             cd "$DEPLOY_PATH"

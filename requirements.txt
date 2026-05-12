@@ -8,6 +8,7 @@ scikit-learn
 mlflow
 fastapi
 uvicorn
+httpx
 pytest
 vaderSentiment
 matplotlib

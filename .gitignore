@@ -22,4 +22,8 @@ logs/airflow/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Editor / agent local files (do not commit)
+.cursor/
+.cursorrules
 /scaler.pkl
