@@ -1,0 +1,10 @@
+# Inference API only (smaller image for small EBS volumes). Full stack for training: requirements.txt + Dockerfile.airflow
+tensorflow-cpu
+mlflow
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scikit-learn
+python-dotenv
+pydantic

@@ -1,4 +1,4 @@
-# FastAPI + TensorFlow inference API
+# FastAPI + TensorFlow inference API (slim deps — see requirements-api.txt)
 FROM python:3.10-slim-bookworm
 
 WORKDIR /app
@@ -9,16 +9,14 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     MLFLOW_TRACKING_URI=sqlite:////app/mlflow.db
 
-# TensorFlow / numeric stack helpers on slim images
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     curl \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY requirements-api.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-api.txt
 
 COPY . .
 
