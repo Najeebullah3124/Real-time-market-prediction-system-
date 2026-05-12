@@ -5,26 +5,26 @@ stages:
     deps:
     - path: build_dataset.py
       hash: md5
-      md5: 234591408f8ead3f24bfc07403357202
-      size: 3472
+      md5: 2603f90a882b639d5494edaf0a4546df
+      size: 4539
     outs:
     - path: dataset/final_dataset.csv
       hash: md5
-      md5: 728e3a197fb57a754dfe90e14f03079c
-      size: 616492
+      md5: 237e01729cf8e0daa4bb0a4b13d85723
+      size: 8195039
   train:
     cmd: python train.py
     deps:
     - path: dataset/final_dataset.csv
       hash: md5
-      md5: 728e3a197fb57a754dfe90e14f03079c
-      size: 616492
+      md5: 88323cc6009f6cab783ff580d61a9b90
+      size: 7564337
     - path: train.py
       hash: md5
-      md5: faa03952987fd0d80b4c32061bb4f85b
-      size: 5106
+      md5: 791a3a9b7227b94183065908d6be213b
+      size: 6824
     outs:
     - path: scaler.pkl
       hash: md5
-      md5: 72f9d1e471594110f0ee41eb5b2d0b65
-      size: 682
+      md5: 0c5d3ef7b5ed996209a84a52b491f4ce
+      size: 666
