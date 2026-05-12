@@ -10,7 +10,7 @@
 #
 # EC2 security group: allow SSH (22) from GitHub Actions IPs or use a self-hosted runner on the instance.
 #
-# If EC2_HOST / EC2_USER / EC2_SSH_KEY are not set, the Deploy job is skipped (workflow still passes).
+# Deploy steps run only when EC2 secrets are set (secrets cannot be used in job-level `if`).
 
 name: CI/CD
 
@@ -87,15 +87,27 @@ jobs:
   deploy:
     name: Deploy to EC2
     needs: build-images
-    # Require SSH secrets or the action fails with "missing server host". Skip deploy when unset (e.g. forks / repos without CD).
     if: |
-      (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) &&
-      secrets.EC2_HOST != '' &&
-      secrets.EC2_USER != '' &&
-      secrets.EC2_SSH_KEY != ''
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
+      - name: Detect EC2 deploy credentials
+        id: ec2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          if [ -n "$EC2_HOST" ] && [ -n "$EC2_USER" ] && [ -n "$EC2_SSH_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deploy skipped — add Actions secrets EC2_HOST, EC2_USER, and EC2_SSH_KEY for end-to-end CD."
+          fi
+
       - name: Deploy over SSH
+        if: steps.ec2.outputs.ready == 'true'
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -119,6 +131,9 @@ jobs:
             bash scripts/deploy.sh
 
       - name: Smoke test API (optional)
+        if: steps.ec2.outputs.ready == 'true'
         continue-on-error: true
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          curl -fsS --connect-timeout 15 "http://${{ secrets.EC2_HOST }}:8000/health" | head -c 500 || echo "Health check skipped (security group may block GitHub runner IPs)"
+          curl -fsS --connect-timeout 15 "http://${EC2_HOST}:8000/health" | head -c 500 || echo "Health check skipped (security group may block GitHub runner IPs)"
